@@ -1,0 +1,51 @@
+#echo $PATH;
+export PATH=$PATH:/opt/android/sdk/tools/bin:/opt/android/sdk/platform-tools;
+##export PATH=$PATH:/mnt/bamboo/android-sdk-linux/tools:/mnt/bamboo/android-sdk-linux/platform-tools;
+#echo $PATH;
+export ANDROID_HOME=/opt/android/sdk/
+##export ANDROID_HOME=/mnt/bamboo/android-sdk-linux
+echo "Android Home: "$ANDROID_HOME;
+
+#ls -l
+unzip -o ${bamboo.project_name}.zip
+#ls -l
+chmod -R 775 ${bamboo.project_folder}
+cd ${bamboo.project_folder}
+
+    echo "NPM INSTALL"
+nvm use 10.16.3
+npm install
+#npm i --unsafe-perm
+npm install -g react-native-cli
+
+cd android
+ls -ltrh
+#android update project -t ${bamboo.android_api_id} -p . -s
+chmod +x gradlew
+
+    echo "Gradle build initiated...";
+./gradlew clean 
+ENVFILE=.env.uat ./gradlew ${bamboo.assemble_release}
+cd ..
+
+    echo "Running react-native plugin"
+#react-native run-android --variant=release
+#./gradlew assembleProd
+if [ "$?" -eq "0" ]
+then
+    echo "Gradle build completed...";
+    pwd
+#chmod -R 775 ${bamboo.project_folder}
+    find ./ -type f -iname *.apk
+    echo "Path: "$PATH;
+# INITIAL APK CUSTOME PATH, IT MAY VARY
+    cd ./android/app/build/outputs/apk/release/
+    pwd 
+    mv ${bamboo.initial_apk_name} ${bamboo.project_name}_${bamboo.build_version.build_number}_${bamboo.release_type}.apk;
+    mv ${bamboo.project_name}_${bamboo.build_version.build_number}_${bamboo.release_type}.apk ../../../../
+    pwd
+    ls -l
+else
+    echo "Failed to build Android project using gradle. Exiting...";
+    exit 1;
+fi
